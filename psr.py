@@ -732,7 +732,7 @@ with st.expander("**1. 原始文书**", expanded=True):
                  key="ps_content")
 
 # 区域2: 新项目信息输入区
-with st.expander("**2. 新项目信息 (New Program Info)**", expanded=True):
+with st.expander("**2. 新项目信息**", expanded=True):
     c1, c2 = st.columns(2)
     with c1:
         # 目标学校输入
