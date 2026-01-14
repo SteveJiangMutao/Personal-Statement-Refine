@@ -223,7 +223,7 @@ def apply_custom_css():
         border-radius: 8px !important;
         padding: 10px !important;
         font-family: 'Times New Roman', serif !important;
-        font-size: 14px !important;
+        font-size: 16px !important;
         line-height: 1.5 !important;
         color: #333333 !important;
         background-color: #ffffff !important;
@@ -240,7 +240,7 @@ def apply_custom_css():
         overflow-y: auto;
         margin-top: 10px; /* 与文本区域对齐 */
         font-family: 'Times New Roman', serif;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.5;
         color: #333;
     }
@@ -256,7 +256,7 @@ def apply_custom_css():
         margin-top: 10px;
         margin-bottom: 20px;
         font-family: 'Times New Roman', serif;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.5;
         color: #333;
     }
@@ -266,13 +266,13 @@ def apply_custom_css():
         color: #3666FA;
         margin-bottom: 10px;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 16px;
     }
     
     /* 预览文本样式 */
     .preview-text {
         font-family: 'Times New Roman', serif;
-        font-size: 14px;
+        font-size: 16px;
         line-height: 1.5;
         color: #333;
     }
