@@ -717,7 +717,7 @@ def build_english_refine_prompt(text_with_instructions):
 # 主界面布局
 # 创建应用的用户界面，包括输入区域和交互元素
 # ==========================================
-st.markdown("<h1>个人陈述修改 Why School</h1>", unsafe_allow_html=True)
+st.markdown("<h1>个人陈述修改</h1>", unsafe_allow_html=True)
 
 # 区域1: 原始文书输入区
 with st.expander("**1. 原始文书 (Old PS)**", expanded=True):
