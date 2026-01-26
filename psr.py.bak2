@@ -1156,10 +1156,7 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
                         st.session_state['confirmed_paragraphs'].add(i)
 
                         # 保存当前段落内容到confirmed_contents
-                        # 优先从文本框session state获取最新内容
-                        textarea_key = f"draft_p_{i}"
-                        latest_content = st.session_state.get(textarea_key, current_draft)
-                        st.session_state['confirmed_contents'][i] = latest_content
+                        st.session_state['confirmed_contents'][i] = current_draft
 
                         # 重建最终预览文本
                         st.session_state['final_preview_text'] = rebuild_final_preview()
@@ -1267,93 +1264,97 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
     # 提供文档预览和导出功能
     # ==========================================
     st.subheader("最终导出")
+    
     # 导出选项（单列布局）
-    # 是否保留加粗高亮
-    keep_highlight = st.checkbox("在 Word 中保留加粗高亮", value=True)
+        # 是否保留加粗高亮
+        keep_highlight = st.checkbox("在 Word 中保留加粗高亮", value=True)
 
-    # 自定义页眉选项
-    custom_header = st.text_input("自定义页眉专业名称 (可选)", 
-                                 value=target_major if target_major else "",
-                                 placeholder="例如: Master of Science in Data Science")
-    
-    # 全文预览
-    st.markdown("### 全文预览")
-    
-    # 显示已确认段落的数量和总段落数
-    confirmed_count = len(st.session_state['confirmed_paragraphs'])
-    total_paragraphs = len(st.session_state['sections_data'])
-    
-    if confirmed_count < total_paragraphs:
-        st.warning(f"已确认 {confirmed_count}/{total_paragraphs} 段落")
-    else:
-        st.success(f"已确认全部 {total_paragraphs} 段落")
-    
-    # 显示最终预览文本
-    # 优先显示清理后的版本，如果存在的话
-    display_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
-
-    # 如果文本为空，显示提示信息
-    if not display_text.strip() and not st.session_state['final_preview_text'].strip():
-        st.info("请先在上方段落中点击'✅ 确认内容'按钮，将段落添加到最终预览")
-
-    st.text_area(
-        "最终文本预览",
-        value=display_text,
-        height=500,
-        key="final_preview_text_display",
-        on_change=lambda: st.session_state.update({
-            'final_preview_text': st.session_state.get('final_preview_text_display', ''),
-            'final_preview_text_cleaned': ''  # 用户编辑后清除清理版本
-        })
-    )
-
-    # 去除AI词汇按钮
-    st.divider()
-    st.markdown("#### 去除AI写作高频词汇")
-    st.caption("点击下方按钮去除文本中的AI写作高频词汇和句式（黑名单）。")
-
-    if api_key:
-        if st.button("🚫 去除AI词汇并生成最终版", type="secondary", use_container_width=True):
-            with st.spinner("正在去除AI写作高频词汇..."):
-                try:
-                    # 获取当前文本
-                    current_text = st.session_state['final_preview_text']
-                    if not current_text.strip():
-                        st.warning("最终预览文本为空")
-                    else:
-                        # 初始化模型
-                        refine_model = genai.GenerativeModel(model_name)
-                        res = refine_model.generate_content(
-                            build_remove_ai_vocab_prompt(current_text),
-                            safety_settings=safety_settings_interactive
-                        )
-                        # 获取处理后的文本
-                        cleaned_text = res.text
-                        # 更新会话状态 - 保存清理版本，保留原始文本
-                        st.session_state['final_preview_text_cleaned'] = cleaned_text
-                        st.success("AI词汇已去除，清理版本已生成！")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"处理失败: {e}")
-    else:
-        st.warning("请先配置API Key以使用此功能")
-    
-    if HAS_DOCX:
-        # 准备导出文本 - 优先使用清理版本
-        export_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
-        if not keep_highlight:
-            export_text = remove_markdown_bold(export_text)
+        # 自定义页眉选项
+        custom_header = st.text_input("自定义页眉专业名称 (可选)", 
+                                     value=target_major if target_major else "",
+                                     placeholder="例如: Master of Science in Data Science")
         
-        # 创建Word文档
-        docx_file = create_docx_smart(export_text, custom_header)
+        # 全文预览
+        st.markdown("### 全文预览")
         
-        # 添加下载按钮
-        st.download_button(
-            label="下载Word文档",
-            data=docx_file,
-            file_name=f"Personal_Statement_{target_school.replace(' ', '_') if target_school else 'Final'}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            type="primary",
-            use_container_width=True
+        # 显示已确认段落的数量和总段落数
+        confirmed_count = len(st.session_state['confirmed_paragraphs'])
+        total_paragraphs = len(st.session_state['sections_data'])
+        
+        if confirmed_count < total_paragraphs:
+            st.warning(f"已确认 {confirmed_count}/{total_paragraphs} 段落")
+        else:
+            st.success(f"已确认全部 {total_paragraphs} 段落")
+        
+        # 显示最终预览文本
+        # 优先显示清理后的版本，如果存在的话
+        display_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
+
+        # 如果文本为空，显示提示信息
+        if not display_text.strip() and not st.session_state['final_preview_text'].strip():
+            st.info("请先在上方段落中点击'✅ 确认内容'按钮，将段落添加到最终预览")
+
+        st.text_area(
+            "最终文本预览",
+            value=display_text,
+            height=500,
+            key="final_preview_text_display",
+            on_change=lambda: st.session_state.update({
+                'final_preview_text': st.session_state.get('final_preview_text_display', ''),
+                'final_preview_text_cleaned': ''  # 用户编辑后清除清理版本
+            })
         )
-        
+
+        # 去除AI词汇按钮
+        st.divider()
+        st.markdown("#### 去除AI写作高频词汇")
+        st.caption("点击下方按钮去除文本中的AI写作高频词汇和句式（黑名单）。")
+
+        if api_key:
+            if st.button("🚫 去除AI词汇并生成最终版", type="secondary", use_container_width=True):
+                with st.spinner("正在去除AI写作高频词汇..."):
+                    try:
+                        # 获取当前文本
+                        current_text = st.session_state['final_preview_text']
+                        if not current_text.strip():
+                            st.warning("最终预览文本为空")
+                        else:
+                            # 初始化模型
+                            refine_model = genai.GenerativeModel(model_name)
+                            res = refine_model.generate_content(
+                                build_remove_ai_vocab_prompt(current_text),
+                                safety_settings=safety_settings_interactive
+                            )
+                            # 获取处理后的文本
+                            cleaned_text = res.text
+                            # 更新会话状态 - 保存清理版本，保留原始文本
+                            st.session_state['final_preview_text_cleaned'] = cleaned_text
+                            st.success("AI词汇已去除，清理版本已生成！")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"处理失败: {e}")
+        else:
+            st.warning("请先配置API Key以使用此功能")
+    
+    with col_exp2:
+        if HAS_DOCX:
+            # 准备导出文本 - 优先使用清理版本
+            export_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
+            if not keep_highlight:
+                export_text = remove_markdown_bold(export_text)
+            
+            # 创建Word文档
+            docx_file = create_docx_smart(export_text, custom_header)
+            
+            # 添加下载按钮
+            st.download_button(
+                label="下载Word文档",
+                data=docx_file,
+                file_name=f"Personal_Statement_{target_school.replace(' ', '_') if target_school else 'Final'}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                type="primary",
+                use_container_width=True
+            )
+            
+            # 添加说明
+            st.info("文档已设置为 Arial 11pt 字体，并添加了页眉")
