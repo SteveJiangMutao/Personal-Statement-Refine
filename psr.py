@@ -188,6 +188,8 @@ def apply_custom_css():
         display: flex;
         flex-direction: column;
         justify-content: center;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     [data-testid="stFileUploader"]:hover {
         border-color: var(--primary-color);
@@ -228,6 +230,8 @@ def apply_custom_css():
         color: #333333 !important;
         background-color: #ffffff !important;
         height: 300px !important;  /* 统一高度 */
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     
     /* 预览容器样式 */
@@ -345,23 +349,36 @@ if 'original_texts' not in st.session_state: st.session_state['original_texts'] 
 if 'final_preview_text' not in st.session_state: st.session_state['final_preview_text'] = ""  # 最终预览文本
 if 'confirmed_paragraphs' not in st.session_state: st.session_state['confirmed_paragraphs'] = set()  # 已确认段落的索引
 
+# 从Streamlit secrets获取Google API Key
+api_key = st.secrets.get("GOOGLE_API_KEY")
+if api_key:
+    os.environ["GOOGLE_API_KEY"] = api_key
+    genai.configure(api_key=api_key)
+else:
+    pass  # 错误信息在侧边栏中显示
+
 # 侧边栏设置
 with st.sidebar:
     st.markdown("### 设置")
-    api_key = st.text_input("Google Gemini API Key", type="password")
-    
-    # 如果提供了API密钥，则配置Google Gemini客户端
     if api_key:
-        os.environ["GOOGLE_API_KEY"] = api_key
-        genai.configure(api_key=api_key)
-    
+        st.success("✅ API Key 已从 Secrets 加载")
+    else:
+        st.sidebar.error("❌ API Key 未配置")
+    st.divider()
     # 显示已生成段落的数量
     if st.session_state['sections_data']:
-        st.divider()
         st.success(f"当前已生成 {len(st.session_state['sections_data'])} 个段落")
 
 # 设置默认使用的模型
 model_name = "gemini-2.5-pro"
+
+# 安全设置，用于交互式API调用
+safety_settings_interactive = {
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
 
 # ==========================================
 # 工具函数
@@ -713,6 +730,64 @@ def build_english_refine_prompt(text_with_instructions):
     Output ONLY the refined English text with modified parts highlighted (no explanations).
     """
 
+# 构建去除AI写作高频词汇的提示词
+def build_remove_ai_vocab_prompt(text):
+    """构建用于去除AI写作高频词汇和句式的提示词"""
+    return f"""
+你是一位专业的英文写作编辑，任务是去除个人陈述中的AI写作高频词汇和句式，使文本更加自然、个性化。
+
+**绝对禁用的AI词汇和句式（黑名单）：**
+A. 滥用的词汇和短语：
+动词：
+address (问题)
+cultivate
+Demonstrate（非严格禁用，需要少用，不要多次重复出现）
+draw (特指 "draw from experience" 这类用法)
+master
+permit
+leverage, utilize
+名词和名词短语：
+command (of a skill)
+commitment
+comprehension (尤其是 deep comprehension)
+Master/mastery
+privilege
+tenure
+testament
+陈腐短语：
+Building on this... / Building on this foundation
+drawn to
+look forward to
+my goal is to
+B. 滥用的结构和比喻：
+副词+动词/形容词结构：避免过度使用“显著提升”、“深入理解”这类组合。
+公式化因果：禁用 By doing X, I was able to Y 和 ...thereby doing... 的句式。
+陈腐的比喻：
+“旅程”隐喻 (e.g., academic/career journey)
+“工具箱”隐喻 (e.g., skill set/toolkit)
+“交汇点”逻辑 (e.g., the intersection of X and Y)
+
+**你的任务：**
+1. 仔细阅读以下文本。
+2. 识别并移除所有黑名单中的词汇和短语。
+3. 改写包含禁用句式的句子，保持原意但使用更自然的表达。
+4. 去除任何陈腐的比喻和公式化结构。
+5. 使文本更加个性化、生动，避免AI生成的痕迹。
+6. 保持文本的专业性和学术性。
+7. **不要添加任何额外解释**，只输出修改后的文本。
+
+**重要规则：**
+- 只修改确实属于黑名单的内容，如果没有问题，不要随意修改。
+- 保留文本的原始含义和逻辑。
+- 输出语言与输入语言一致（英文输入则英文输出，中文输入则中文输出）。
+
+**输入文本：**
+{text}
+
+**输出：**
+只输出修改后的文本，不要有任何前言或说明。
+"""
+
 # ==========================================
 # 主界面布局
 # 创建应用的用户界面，包括输入区域和交互元素
@@ -892,13 +967,7 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
     st.subheader("全篇编辑模式 (Full Edit Mode)")
     st.caption("请在左侧文本框中直接编辑，或在 `【】` 或 `[]` 中输入修改指令，然后点击下方按钮执行修改。")
 
-    # 安全设置，用于交互式API调用
-    safety_settings_interactive = {
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
+    # 使用全局安全设置 safety_settings_interactive
 
     # 遍历所有段落，为每个段落创建编辑界面
     for i, section_data in enumerate(st.session_state['sections_data']):
@@ -1187,6 +1256,37 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
             height=500,
             key="final_preview_text"  # 直接使用会话状态变量名作为键"
         )
+
+        # 去除AI词汇按钮
+        st.divider()
+        st.markdown("#### 去除AI写作高频词汇")
+        st.caption("点击下方按钮去除文本中的AI写作高频词汇和句式（黑名单）。")
+
+        if api_key:
+            if st.button("🚫 去除AI词汇并生成最终版", type="secondary", use_container_width=True):
+                with st.spinner("正在去除AI写作高频词汇..."):
+                    try:
+                        # 获取当前文本
+                        current_text = st.session_state['final_preview_text']
+                        if not current_text.strip():
+                            st.warning("最终预览文本为空")
+                        else:
+                            # 初始化模型
+                            refine_model = genai.GenerativeModel(model_name)
+                            res = refine_model.generate_content(
+                                build_remove_ai_vocab_prompt(current_text),
+                                safety_settings=safety_settings_interactive
+                            )
+                            # 获取处理后的文本
+                            cleaned_text = res.text
+                            # 更新会话状态
+                            st.session_state['final_preview_text'] = cleaned_text
+                            st.success("AI词汇已去除，文本已更新！")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"处理失败: {e}")
+        else:
+            st.warning("请先配置API Key以使用此功能")
     
     with col_exp2:
         if HAS_DOCX:
