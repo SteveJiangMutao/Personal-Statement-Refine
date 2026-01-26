@@ -1252,16 +1252,14 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
     st.subheader("最终导出")
     
     # 导出选项
-    col_exp1, col_exp2 = st.columns([4, 1])
     
-    with col_exp1:
-        # 是否保留加粗高亮
-        keep_highlight = st.checkbox("在 Word 中保留加粗高亮", value=True)
+    # 是否保留加粗高亮
+    keep_highlight = st.checkbox("在 Word 中保留加粗高亮", value=True)
 
-        # 自定义页眉选项
-        custom_header = st.text_input("自定义页眉专业名称 (可选)", 
-                                     value=target_major if target_major else "",
-                                     placeholder="例如: Master of Science in Data Science")
+    # 自定义页眉选项
+    custom_header = st.text_input("自定义页眉专业名称 (可选)",
+                                 value=target_major if target_major else "",
+                                 placeholder="例如: Master of Science in Data Science")
         
         # 全文预览
         st.markdown("### 全文预览")
@@ -1325,9 +1323,8 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
         else:
             st.warning("请先配置API Key以使用此功能")
     
-    with col_exp2:
-        if HAS_DOCX:
-            # 准备导出文本 - 优先使用清理版本
+    if HAS_DOCX:
+        # 准备导出文本 - 优先使用清理版本
             export_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
             if not keep_highlight:
                 export_text = remove_markdown_bold(export_text)
