@@ -817,13 +817,15 @@ with st.expander("**2. 新项目信息**", expanded=True):
         target_major = st.text_input("目标专业", placeholder="e.g., MS in Biostatistics")
     
     st.markdown("---")
-    # 课程大纲上传和文本输入
+    # 课程大纲上传
     st.file_uploader("上传课程大纲", type=['docx', 'pdf', 'txt'], key="uploader_curr",
                      on_change=lambda: st.session_state.update({'curr_content': extract_text_from_file(st.session_state.uploader_curr)}))
-    st.text_area("课程文本:", height=150, key="curr_content")
 
     # 图片上传区，支持多个图片
     uploaded_images = st.file_uploader("上传图片", type=['png', 'jpg', 'jpeg', 'webp'], accept_multiple_files=True)
+
+    # 课程文本输入
+    st.text_area("课程文本:", height=150, key="curr_content")
 
     st.markdown("---")
     # 写作策略输入区
