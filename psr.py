@@ -817,17 +817,14 @@ with st.expander("**2. 新项目信息**", expanded=True):
         target_major = st.text_input("目标专业", placeholder="e.g., MS in Biostatistics")
     
     st.markdown("---")
-    col_curr_text, col_curr_img = st.columns(2)
-    with col_curr_text:
-        # 课程大纲上传和文本输入
-        st.file_uploader("上传课程大纲", type=['docx', 'pdf', 'txt'], key="uploader_curr", 
-                         on_change=lambda: st.session_state.update({'curr_content': extract_text_from_file(st.session_state.uploader_curr)}))
-        st.text_area("课程文本:", height=150, key="curr_content")
+    # 课程大纲上传和文本输入
+    st.file_uploader("上传课程大纲", type=['docx', 'pdf', 'txt'], key="uploader_curr",
+                     on_change=lambda: st.session_state.update({'curr_content': extract_text_from_file(st.session_state.uploader_curr)}))
+    st.text_area("课程文本:", height=150, key="curr_content")
 
-    with col_curr_img:
-        # 图片上传区，支持多个图片
-        uploaded_images = st.file_uploader("上传图片", type=['png', 'jpg', 'jpeg', 'webp'], accept_multiple_files=True)
-            
+    # 图片上传区，支持多个图片
+    uploaded_images = st.file_uploader("上传图片", type=['png', 'jpg', 'jpeg', 'webp'], accept_multiple_files=True)
+
     st.markdown("---")
     # 写作策略输入区
     st.text_area("3. 写作思路与策略 (可选):", height=100, key="strategy_content", 
