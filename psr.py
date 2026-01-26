@@ -136,11 +136,14 @@ def apply_custom_css():
         color: var(--button-text) !important;
         border: none !important;
         border-radius: 8px !important;
-        padding: 0.6rem 1.5rem !important;
+        padding: 0.5rem 1rem !important;
         font-weight: 500 !important;
-        font-size: 0.95rem !important;
+        font-size: 0.9rem !important;
         box-shadow: 0 1px 2px rgba(54, 102, 250, 0.2) !important;
         transition: all 0.2s ease !important;
+        min-width: 80px;
+        height: auto;
+        line-height: 1.4;
     }
     
     /* 强制按钮内所有元素颜色为米色 */
@@ -224,7 +227,7 @@ def apply_custom_css():
         border: 1px solid rgba(54, 102, 250, 0.2) !important;
         border-radius: 8px !important;
         padding: 10px !important;
-        font-family: 'Times New Roman', serif !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
         font-size: 16px !important;
         line-height: 1.5 !important;
         color: #333333 !important;
@@ -243,7 +246,7 @@ def apply_custom_css():
         height: 300px;
         overflow-y: auto;
         margin-top: 10px; /* 与文本区域对齐 */
-        font-family: 'Times New Roman', serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
         font-size: 16px;
         line-height: 1.5;
         color: #333;
@@ -259,7 +262,7 @@ def apply_custom_css():
         overflow-y: auto;
         margin-top: 10px;
         margin-bottom: 20px;
-        font-family: 'Times New Roman', serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
         font-size: 16px;
         line-height: 1.5;
         color: #333;
@@ -275,7 +278,7 @@ def apply_custom_css():
     
     /* 预览文本样式 */
     .preview-text {
-        font-family: 'Times New Roman', serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
         font-size: 16px;
         line-height: 1.5;
         color: #333;
@@ -347,6 +350,7 @@ if 'annotation_processing' not in st.session_state: st.session_state['annotation
 if 'annotation_results' not in st.session_state: st.session_state['annotation_results'] = {}  # 批注处理结果
 if 'original_texts' not in st.session_state: st.session_state['original_texts'] = {}  # 原始文本，用于比较
 if 'final_preview_text' not in st.session_state: st.session_state['final_preview_text'] = ""  # 最终预览文本
+if 'final_preview_text_cleaned' not in st.session_state: st.session_state['final_preview_text_cleaned'] = ""  # 清理后的最终预览文本
 if 'confirmed_paragraphs' not in st.session_state: st.session_state['confirmed_paragraphs'] = set()  # 已确认段落的索引
 
 # 从Streamlit secrets获取Google API Key
@@ -455,13 +459,13 @@ def create_docx_smart(text_content, major_name=""):
     
     # 设置页眉文本格式
     header_run = header_para.runs[0]
-    header_run.font.name = 'Times New Roman'
+    header_run.font.name = 'Arial'
     header_run.font.size = Pt(11)
-    
+
     # 设置正文默认样式
     style = doc.styles['Normal']
     font = style.font
-    font.name = 'Times New Roman'
+    font.name = 'Arial'
     font.size = Pt(11)
     
     # 处理正文内容，保留加粗格式
@@ -863,6 +867,7 @@ if generate_btn:
         st.session_state['annotation_results'] = {}
         st.session_state['original_texts'] = {}
         st.session_state['final_preview_text'] = ""  # 重置最终预览文本
+        st.session_state['final_preview_text_cleaned'] = ""  # 重置清理后的预览文本
         st.session_state['confirmed_paragraphs'] = set()  # 重置已确认段落
         
         # 创建一个空白占位符用于显示生成进度
@@ -1020,7 +1025,7 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
             has_chinese = contains_chinese(current_draft)
             
             # 操作按钮行
-            c_btn1, c_btn2, c_btn3, c_btn4 = st.columns([1.2, 1, 1, 1])
+            c_btn1, c_btn2, c_btn3, c_btn4 = st.columns([1, 1, 1, 1])
             
             # 批注修改按钮 - 修改为直接替换原文本并显示预览
             with c_btn1:
@@ -1250,10 +1255,17 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
             st.success(f"已确认全部 {total_paragraphs} 段落")
         
         # 显示最终预览文本
+        # 优先显示清理后的版本，如果存在的话
+        display_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
         st.text_area(
             "最终文本预览",
+            value=display_text,
             height=500,
-            key="final_preview_text"  # 直接使用会话状态变量名作为键"
+            key="final_preview_text_display",
+            on_change=lambda: st.session_state.update({
+                'final_preview_text': st.session_state['final_preview_text_display'],
+                'final_preview_text_cleaned': ''  # 用户编辑后清除清理版本
+            })
         )
 
         # 去除AI词汇按钮
@@ -1278,9 +1290,9 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
                             )
                             # 获取处理后的文本
                             cleaned_text = res.text
-                            # 更新会话状态
-                            st.session_state['final_preview_text'] = cleaned_text
-                            st.success("AI词汇已去除，文本已更新！")
+                            # 更新会话状态 - 保存清理版本，保留原始文本
+                            st.session_state['final_preview_text_cleaned'] = cleaned_text
+                            st.success("AI词汇已去除，清理版本已生成！")
                             st.rerun()
                     except Exception as e:
                         st.error(f"处理失败: {e}")
@@ -1289,8 +1301,8 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
     
     with col_exp2:
         if HAS_DOCX:
-            # 准备导出文本
-            export_text = st.session_state['final_preview_text']
+            # 准备导出文本 - 优先使用清理版本
+            export_text = st.session_state.get('final_preview_text_cleaned') or st.session_state['final_preview_text']
             if not keep_highlight:
                 export_text = remove_markdown_bold(export_text)
             
@@ -1308,4 +1320,4 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
             )
             
             # 添加说明
-            st.info("文档已设置为 Times New Roman 11pt 字体，并添加了页眉")
+            st.info("文档已设置为 Arial 11pt 字体，并添加了页眉")
