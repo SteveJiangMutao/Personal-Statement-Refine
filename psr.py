@@ -948,12 +948,12 @@ def build_analysis_prompt(school, major, old_text, new_course_text, has_images, 
     请开始输出：
     """
 
-# 构建修改提示词 - 修改后确保直接替换原文本
+# 构建修改提示词 - 修改后确保直接替换原文本，修改部分用**高亮
 def build_refine_prompt(text_with_instructions, has_chinese):
-    """构建用于根据批注修改文本的提示词，根据文本是否包含中文决定输出语言"""
+    """构建用于根据批注修改文本的提示词，根据文本是否包含中文决定输出语言，修改部分高亮显示"""
     # 根据文本是否包含中文决定输出语言
     output_language = "CHINESE" if has_chinese else "ENGLISH"
-    
+
     return f"""
     You are an expert editor. The user has provided a draft text below, but they have inserted **modification instructions** inside brackets `【...】` or `[...]`.
     **Your Task:**
@@ -963,17 +963,22 @@ def build_refine_prompt(text_with_instructions, has_chinese):
     4. **Remove** the instruction markers and the instruction text itself from the final output.
     5. Keep the rest of the text that was not targeted by instructions unchanged.
     6. Ensure the final output is smooth and coherent.
-    
+
     **IMPORTANT OUTPUT LANGUAGE RULE:**
     - The text contains Chinese: {has_chinese}
-    - Your output MUST be in {output_language}. 
+    - Your output MUST be in {output_language}.
     - If the input contains Chinese text, keep using Chinese in your output.
     - If the input is entirely in English, respond in English.
-    
+
+    **HIGHLIGHTING RULE:**
+    - Wrap ALL modified parts with double asterisks (**) to highlight them (e.g., **this text was modified**).
+    - Do NOT use any other Markdown formatting symbols.
+    - Keep the original text that was not modified unchanged and without highlighting.
+
     **Input Text:**
     {text_with_instructions}
     **Output:**
-    Output ONLY the refined text (no explanations).
+    Output ONLY the refined text with modified parts highlighted using ** (no explanations).
     """
 
 # 修改翻译prompt，明确指示将中文翻译为英文，确保输出纯英文且无Markdown符号
@@ -1035,9 +1040,9 @@ def build_translate_prompt(hybrid_text, style="US"):
        - Apply all rules above only to newly translated parts (from Chinese to English).
     """
 
-# 修改英文精修提示词，确保输出纯英文且无Markdown符号
+# 修改英文精修提示词，确保输出纯英文，遵循专业写作规范，修改部分用**高亮
 def build_english_refine_prompt(text_with_instructions):
-    """构建用于英文精修阶段的提示词，确保输出纯英文，遵循专业写作规范"""
+    """构建用于英文精修阶段的提示词，确保输出纯英文，遵循专业写作规范，修改部分高亮显示"""
     return f"""
     You are an expert academic editor specializing in personal statements for graduate school applications.
 
@@ -1052,8 +1057,9 @@ def build_english_refine_prompt(text_with_instructions):
     **CRITICAL RULES (MUST FOLLOW):**
     1. **OUTPUT FORMAT**:
        - Output MUST be in ENGLISH only.
-       - **DO NOT use any Markdown formatting symbols** (no asterisks, bold, etc.)
-       - Output clean text without any formatting marks.
+       - **HIGHLIGHTING**: Wrap ALL modified parts with double asterisks (**) to highlight them (e.g., **this text was modified**).
+       - Do NOT use any other Markdown formatting symbols (no single asterisks, underscores, etc.).
+       - Keep the original text that was not modified unchanged and without highlighting.
 
     2. **BANNED VOCABULARY (DO NOT USE)**:
        - master / mastery
@@ -1099,73 +1105,9 @@ def build_english_refine_prompt(text_with_instructions):
     {text_with_instructions}
 
     **Output:**
-    Output ONLY the refined English text (no explanations, no formatting marks).
+    Output ONLY the refined English text with modified parts highlighted using ** (no explanations).
     """
 
-# 构建去除AI写作高频词汇的提示词
-def build_remove_ai_vocab_prompt(text):
-    """构建用于去除AI写作高频词汇和句式的提示词"""
-    return f"""
-你是一位专业的英文写作编辑，任务是去除个人陈述中的AI写作高频词汇和句式，使文本更加自然、个性化。
-
-**绝对禁用的AI词汇和句式（黑名单）：**
-A. 滥用的词汇和短语：
-动词：
-address (问题)
-cultivate
-Demonstrate（非严格禁用，需要少用，不要多次重复出现）
-draw (特指 "draw from experience" 这类用法)
-master
-permit
-leverage, utilize
-名词和名词短语：
-command (of a skill)
-commitment
-comprehension (尤其是 deep comprehension)
-Master/mastery
-privilege
-tenure
-testament
-陈腐短语：
-Building on this... / Building on this foundation
-drawn to
-look forward to
-my goal is to
-intend to
-B. 滥用的结构和比喻：
-副词+动词/形容词结构：避免过度使用"显著提升"、"深入理解"这类组合。
-公式化因果：禁用 By doing X, I was able to Y 和 ...thereby doing... 的句式。
-陈腐的比喻：
-"旅程"隐喻 (e.g., academic/career journey)
-"工具箱"隐喻 (e.g., skill set/toolkit)
-"交汇点"逻辑 (e.g., the intersection of X and Y)
-
-C. **Sentence Structure Variety (Balanced Rule)**: AI models often overuse the "comma + verb-ing" structure (e.g., ", revealing trends"). Do not strictly ban it, as it is valid in academic English, but **use it sparingly** to avoid a repetitive "AI tone." Instead, prioritize variety by using relative clauses (e.g., ", which revealed..."), coordination (e.g., "and revealed..."), or starting new sentences where appropriate for better flow.
-
-**重要规则：**
-7. **IMPORTANT - Remove Markdown**: Remove all Markdown formatting symbols like asterisks (*), double asterisks (**), underscores (_), etc. from the output. Provide clean text without any Markdown formatting.
-8. **Punctuation with Quotation Marks**: For general text (not formal citations), always place commas, periods, and other punctuation marks OUTSIDE of quotation marks, not inside. For example, use "example", not "example,". For formal citations, maintain the original citation style's punctuation rules.
-
-**你的任务：**
-1. 仔细阅读以下文本。
-2. 识别并移除所有黑名单中的词汇和短语。
-3. 改写包含禁用句式的句子，保持原意但使用更自然的表达。
-4. 去除任何陈腐的比喻和公式化结构。
-5. 使文本更加个性化、生动，避免AI生成的痕迹。
-6. 保持文本的专业性和学术性。
-7. **不要添加任何额外解释**，只输出修改后的文本。
-
-**重要规则：**
-- 只修改确实属于黑名单的内容，如果没有问题，不要随意修改。
-- 保留文本的原始含义和逻辑。
-- 输出语言与输入语言一致（英文输入则英文输出，中文输入则中文输出）。
-
-**输入文本：**
-{text}
-
-**输出：**
-只输出修改后的文本，不要有任何前言或说明。
-"""
 
 # ==========================================
 # 主界面布局
@@ -1819,96 +1761,6 @@ if st.session_state['show_sections'] and st.session_state['sections_data']:
         if display_text and len(display_text) > 50:
             st.markdown(f"**直接Markdown显示前100字符:** {display_text[:100]}...")
 
-    # 去除AI词汇按钮
-    st.divider()
-    st.markdown("#### 去除AI写作高频词汇")
-    st.caption("点击下方按钮去除文本中的AI写作高频词汇和句式（黑名单）。")
-
-    # 在去除AI词汇按钮前添加调试代码
-    if DEBUG_MODE:
-        st.write(f"调试: final_preview_text长度 = {len(st.session_state['final_preview_text'])}")
-        st.write(f"调试: confirmed_paragraphs = {st.session_state['confirmed_paragraphs']}")
-        st.write(f"调试: confirmed_contents keys = {list(st.session_state['confirmed_contents'].keys())}")
-
-    if api_key:
-        if st.button("🚫 去除AI词汇并生成最终版", type="secondary", use_container_width=True):
-            logger.info(f"=== 点击去除AI词汇按钮 ===")
-            logger.info(f"final_preview_text长度: {len(st.session_state['final_preview_text'])}")
-            logger.info(f"final_preview_text前200字符: {st.session_state['final_preview_text'][:200] if st.session_state['final_preview_text'] else '空'}")
-            logger.info(f"final_preview_text_cleaned长度: {len(st.session_state.get('final_preview_text_cleaned', ''))}")
-            logger.info(f"final_preview_text_cleaned前200字符: {st.session_state.get('final_preview_text_cleaned', '')[:200] if st.session_state.get('final_preview_text_cleaned') else '空'}")
-            logger.info(f"final_preview_text_display session state存在: {'final_preview_text_display' in st.session_state}")
-            if 'final_preview_text_display' in st.session_state:
-                logger.info(f"final_preview_text_display长度: {len(st.session_state['final_preview_text_display'])}")
-                logger.info(f"final_preview_text_display前200字符: {st.session_state['final_preview_text_display'][:200] if st.session_state['final_preview_text_display'] else '空'}")
-            logger.info(f"confirmed_paragraphs: {st.session_state['confirmed_paragraphs']}")
-            logger.info(f"confirmed_contents keys: {list(st.session_state['confirmed_contents'].keys())}")
-
-            with st.spinner("正在去除AI写作高频词汇..."):
-                try:
-                    # 获取当前文本 - 优先使用文本区域的当前内容
-                    current_text = st.session_state.get('final_preview_text_display', st.session_state['final_preview_text'])
-                    logger.info(f"准备处理的文本来源: {'final_preview_text_display' if 'final_preview_text_display' in st.session_state else 'final_preview_text'}")
-                    logger.info(f"准备处理的文本长度: {len(current_text) if current_text else 0}")
-                    logger.info(f"准备处理的文本前200字符: {current_text[:200] if current_text else '空'}")
-
-                    if not current_text.strip():
-                        logger.warning("最终预览文本为空")
-                        st.warning("最终预览文本为空")
-                    else:
-                        logger.info(f"调用AI模型处理文本，长度: {len(current_text)}")
-                        logger.info(f"构建prompt并发送到AI...")
-                        # 初始化模型
-                        refine_model = genai.GenerativeModel(model_name)
-                        res = refine_model.generate_content(
-                            build_remove_ai_vocab_prompt(current_text),
-                            safety_settings=safety_settings_interactive
-                        )
-                        # 获取处理后的文本
-                        cleaned_text = res.text
-                        logger.info(f"AI处理完成，返回文本长度: {len(cleaned_text)}")
-                        logger.debug(f"处理后文本前500字符: {cleaned_text[:500] if cleaned_text else '空'}")
-                        logger.info(f"原始文本长度: {len(current_text)}，处理后长度: {len(cleaned_text)}")
-
-                        # 更新会话状态 - 保存清理版本，保留原始文本
-                        st.session_state['final_preview_text_cleaned'] = cleaned_text
-                        logger.info(f"final_preview_text_cleaned 已设置，长度: {len(cleaned_text)}")
-                        logger.info(f"session state中 final_preview_text_cleaned 现在: {len(st.session_state.get('final_preview_text_cleaned', ''))} 字符")
-
-                        # 清除文本区域的session state，确保下次渲染使用新值
-                        if 'final_preview_text_display' in st.session_state:
-                            del st.session_state['final_preview_text_display']
-                            logger.info("已清除final_preview_text_display，确保下次渲染使用清理版本")
-
-                        # 注意：文本区域的值会在下一次渲染时通过text_area_value自动更新
-                        logger.info(f"清理版本已保存到final_preview_text_cleaned")
-
-                        # 检查清理后的文本是否包含Markdown符号
-                        markdown_symbols = ['**', '*', '__', '_', '`', '#', '##', '###', '####']
-                        found_symbols = [sym for sym in markdown_symbols if sym in cleaned_text]
-                        if found_symbols:
-                            logger.warning(f"清理文本中仍然包含Markdown符号: {found_symbols}")
-
-                        # 调试：检查 final_preview_text 是否被意外修改
-                        logger.info(f"处理后 final_preview_text长度: {len(st.session_state['final_preview_text'])}")
-
-                        # 立即记录最终显示文本的状态
-                        cleaned_text_check = st.session_state.get('final_preview_text_cleaned', '')
-                        if cleaned_text_check and cleaned_text_check.strip():
-                            display_text_should_be = cleaned_text_check
-                            logger.info(f"处理完成后，display_text应该显示final_preview_text_cleaned，长度: {len(display_text_should_be)}")
-                        else:
-                            display_text_should_be = st.session_state['final_preview_text']
-                            logger.info(f"处理完成后，display_text应该显示final_preview_text，长度: {len(display_text_should_be)}")
-
-                        st.success("AI词汇已去除，清理版本已生成并显示在文本区域中！")
-                        st.rerun()
-                except Exception as e:
-                    logger.error(f"去除AI词汇失败: {e}")
-                    logger.exception(f"完整异常信息:")
-                    st.error(f"处理失败: {e}")
-    else:
-        st.warning("请先配置API Key以使用此功能")
     
     if HAS_DOCX:
         # 准备导出文本 - 优先使用清理版本
